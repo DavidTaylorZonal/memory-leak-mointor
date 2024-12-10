@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "memory-leak-mointor": ["../src/index"],
+      "memory-leak-mointor/*": ["../src/*"]
+    }
+  }
+}
