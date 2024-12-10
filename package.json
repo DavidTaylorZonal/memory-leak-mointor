@@ -28,11 +28,13 @@
   "author": "David Taylor <david.taylor@zonal.co.uk> (https://github.com/DavidTaylorZonal)",
   "license": "MIT",
   "homepage": "https://github.com/DavidTaylorZonal/memory-leak-mointor#readme",
-  "dependencies": {},
+  "dependencies": {
+    "zustand": "^5.0.2"
+  },
   "devDependencies": {
     "@types/react": "~18.3.12",
-    "expo-module-scripts": "^4.0.2",
     "expo": "~52.0.0",
+    "expo-module-scripts": "^4.0.2",
     "react-native": "0.76.0"
   },
   "peerDependencies": {

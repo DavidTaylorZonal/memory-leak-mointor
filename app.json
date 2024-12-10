@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "14a72aa5-e9c9-415c-abd9-4b2d15b8d197"
+      }
+    },
+    "android": {
+      "package": "com.david.taylor.memoryleakmointor"
+    }
+  }
+}

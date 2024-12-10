@@ -1,12 +1,7 @@
-import { NativeModule, requireNativeModule } from 'expo';
+import { requireNativeModule } from "expo-modules-core";
+import { MemoryLeakMonitorModule } from "./MemoryLeakMointor.types";
 
-import { MemoryLeakMointorModuleEvents } from './MemoryLeakMointor.types';
-
-declare class MemoryLeakMointorModule extends NativeModule<MemoryLeakMointorModuleEvents> {
-  PI: number;
-  hello(): string;
-  setValueAsync(value: string): Promise<void>;
-}
-
-// This call loads the native module object from the JSI.
-export default requireNativeModule<MemoryLeakMointorModule>('MemoryLeakMointor');
+// This loads the native module object from the JSI
+export default requireNativeModule<MemoryLeakMonitorModule>(
+  "MemoryLeakMointor"
+);

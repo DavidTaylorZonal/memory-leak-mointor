@@ -2,49 +2,120 @@ package expo.modules.memoryleakmointor
 
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-import java.net.URL
+import android.app.ActivityManager
+import android.content.Context
+import android.os.Process
+import kotlin.math.roundToInt
 
 class MemoryLeakMointorModule : Module() {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
-  override fun definition() = ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('MemoryLeakMointor')` in JavaScript.
-    Name("MemoryLeakMointor")
+    override fun definition() = ModuleDefinition {
+        Name("MemoryLeakMointor")
 
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants(
-      "PI" to Math.PI
-    )
+        Constants(
+            "MEMORY_UNITS" to "MB",
+            "UPDATE_INTERVAL" to 1000,
+            "PI" to Math.PI
+        )
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
+        Events("onChange", "onMemoryUpdate")
 
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      "Hello world! 👋"
+        Function("hello") {
+            "Hello world! 👋"
+        }
+
+        AsyncFunction("setValueAsync") { value: String ->
+            sendEvent("onChange", mapOf(
+                "value" to value
+            ))
+        }
+
+        AsyncFunction("getMemoryInfo") {
+            val activityManager = appContext.reactContext?.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                ?: throw Exception("Could not get ActivityManager")
+                
+            val memoryInfo = ActivityManager.MemoryInfo()
+            activityManager.getMemoryInfo(memoryInfo)
+
+            val pid = Process.myPid()
+            val pids = intArrayOf(pid)
+            val processMemoryInfo = activityManager.getProcessMemoryInfo(pids)
+            
+            val totalMemoryMB = (memoryInfo.totalMem / 1024.0 / 1024.0).roundToInt()
+            val availMemoryMB = (memoryInfo.availMem / 1024.0 / 1024.0).roundToInt()
+            val usedMemoryMB = totalMemoryMB - availMemoryMB
+            val appMemoryMB = (processMemoryInfo[0].totalPss / 1024.0).roundToInt()
+
+            mapOf(
+                "totalMemory" to totalMemoryMB,
+                "availableMemory" to availMemoryMB,
+                "usedMemory" to usedMemoryMB,
+                "appMemory" to appMemoryMB,
+                "isLowMemory" to memoryInfo.lowMemory,
+                "lowMemoryThreshold" to (memoryInfo.threshold / 1024.0 / 1024.0).roundToInt()
+            )
+        }
+
+        AsyncFunction("startMemoryMonitoring") { intervalMs: Int ->
+            startMemoryUpdates(intervalMs)
+            "Memory monitoring started"
+        }
+
+        AsyncFunction("stopMemoryMonitoring") {
+            stopMemoryUpdates()
+            "Memory monitoring stopped"
+        }
     }
 
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { value: String ->
-      // Send an event to JavaScript.
-      sendEvent("onChange", mapOf(
-        "value" to value
-      ))
+    private var memoryUpdateJob: java.util.Timer? = null
+
+    private fun getMemoryMetrics(): Map<String, Any> {
+        val activityManager = appContext.reactContext?.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            ?: throw Exception("Could not get ActivityManager")
+            
+        val memoryInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+
+        val pid = Process.myPid()
+        val pids = intArrayOf(pid)
+        val processMemoryInfo = activityManager.getProcessMemoryInfo(pids)
+        
+        val totalMemoryMB = (memoryInfo.totalMem / 1024.0 / 1024.0).roundToInt()
+        val availMemoryMB = (memoryInfo.availMem / 1024.0 / 1024.0).roundToInt()
+        val usedMemoryMB = totalMemoryMB - availMemoryMB
+        val appMemoryMB = (processMemoryInfo[0].totalPss / 1024.0).roundToInt()
+
+        return mapOf(
+            "totalMemory" to totalMemoryMB,
+            "availableMemory" to availMemoryMB,
+            "usedMemory" to usedMemoryMB,
+            "appMemory" to appMemoryMB,
+            "isLowMemory" to memoryInfo.lowMemory,
+            "lowMemoryThreshold" to (memoryInfo.threshold / 1024.0 / 1024.0).roundToInt()
+        )
     }
 
-    // Enables the module to be used as a native view. Definition components that are accepted as part of
-    // the view definition: Prop, Events.
-    View(MemoryLeakMointorView::class) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { view: MemoryLeakMointorView, url: URL ->
-        view.webView.loadUrl(url.toString())
-      }
-      // Defines an event that the view can send to JavaScript.
-      Events("onLoad")
+    private fun startMemoryUpdates(intervalMs: Int) {
+        stopMemoryUpdates()
+
+        memoryUpdateJob = java.util.Timer().apply {
+            scheduleAtFixedRate(object : java.util.TimerTask() {
+                override fun run() {
+                    try {
+                        val memoryMetrics = getMemoryMetrics()
+                        sendEvent("onMemoryUpdate", mapOf(
+                            "memoryInfo" to memoryMetrics,
+                            "timestamp" to System.currentTimeMillis()
+                        ))
+                    } catch (e: Exception) {
+                        // Handle or log error
+                    }
+                }
+            }, 0, intervalMs.toLong())
+        }
     }
-  }
+
+    private fun stopMemoryUpdates() {
+        memoryUpdateJob?.cancel()
+        memoryUpdateJob = null
+    }
 }
