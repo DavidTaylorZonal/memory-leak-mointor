@@ -34,6 +34,7 @@ if (useManagedAndroidSdkVersions) {
 android {
   namespace "expo.modules.memoryleakmointor"
   defaultConfig {
+    // applicationId "com.david.taylor.memoryleakmointor"
     versionCode 1
     versionName "0.1.0"
   }

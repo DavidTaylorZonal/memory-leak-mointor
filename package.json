@@ -13,7 +13,9 @@
     "prepublishOnly": "expo-module prepublishOnly",
     "expo-module": "expo-module",
     "open:ios": "xed example/ios",
-    "open:android": "open -a \"Android Studio\" example/android"
+    "open:android": "open -a \"Android Studio\" example/android",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "keywords": [
     "react-native",
@@ -29,7 +31,11 @@
   "license": "MIT",
   "homepage": "https://github.com/DavidTaylorZonal/memory-leak-mointor#readme",
   "dependencies": {
-    "zustand": "^5.0.2"
+    "zustand": "^5.0.2",
+    "expo-dev-client": "~5.0.5",
+    "expo": "~52.0.17",
+    "react": "18.3.1",
+    "react-native": "0.76.3"
   },
   "devDependencies": {
     "@types/react": "~18.3.12",

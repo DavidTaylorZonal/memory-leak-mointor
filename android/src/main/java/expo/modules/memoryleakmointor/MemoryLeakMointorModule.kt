@@ -79,16 +79,27 @@ class MemoryLeakMointorModule : Module() {
         val pids = intArrayOf(pid)
         val processMemoryInfo = activityManager.getProcessMemoryInfo(pids)
         
+        // Force a garbage collection to get more accurate readings
+        Runtime.getRuntime().gc()
+        System.gc()
+        
+        // Get detailed memory info
+        val totalPss = processMemoryInfo[0].totalPss
+        val dalvikPss = processMemoryInfo[0].dalvikPss
+        val nativePss = processMemoryInfo[0].nativePss
+        
         val totalMemoryMB = (memoryInfo.totalMem / 1024.0 / 1024.0).roundToInt()
         val availMemoryMB = (memoryInfo.availMem / 1024.0 / 1024.0).roundToInt()
         val usedMemoryMB = totalMemoryMB - availMemoryMB
-        val appMemoryMB = (processMemoryInfo[0].totalPss / 1024.0).roundToInt()
+        val appMemoryMB = (totalPss / 1024.0).roundToInt()
 
         return mapOf(
             "totalMemory" to totalMemoryMB,
             "availableMemory" to availMemoryMB,
             "usedMemory" to usedMemoryMB,
             "appMemory" to appMemoryMB,
+            "dalvikMemory" to (dalvikPss / 1024.0).roundToInt(),
+            "nativeMemory" to (nativePss / 1024.0).roundToInt(),
             "isLowMemory" to memoryInfo.lowMemory,
             "lowMemoryThreshold" to (memoryInfo.threshold / 1024.0 / 1024.0).roundToInt()
         )
@@ -107,7 +118,7 @@ class MemoryLeakMointorModule : Module() {
                             "timestamp" to System.currentTimeMillis()
                         ))
                     } catch (e: Exception) {
-                        // Handle or log error
+                        println("Error in memory monitoring: ${e.message}")
                     }
                 }
             }, 0, intervalMs.toLong())

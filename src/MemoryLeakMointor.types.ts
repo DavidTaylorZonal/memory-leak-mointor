@@ -33,7 +33,6 @@ export interface MemoryLeakMonitorModule {
   readonly PI: number;
 
   // Methods
-  hello(): Promise<string>;
   setValueAsync(value: string): Promise<void>;
   getMemoryInfo(): Promise<MemoryInfo>;
   startMemoryMonitoring(intervalMs: number): Promise<string>;

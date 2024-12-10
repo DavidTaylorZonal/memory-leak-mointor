@@ -1,4 +1,4 @@
-package com.david.taylor.memoryleakmointor
+package expo.modules.memoryleakmointor.example
 
 import android.app.Application
 import android.content.res.Configuration

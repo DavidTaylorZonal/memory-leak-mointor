@@ -1,13 +1,17 @@
-import { withLeakDetection } from "memory-leak-mointor";
+import { useLeakDetectionStore, withLeakDetection } from "memory-leak-mointor";
 import React, { useEffect, useState } from "react";
 import { View, Text, Button, StyleSheet } from "react-native";
 
+// Create large objects that won't be cleaned up
 const leakedData: any[] = [];
 
 const BaseLeakyComponent = () => {
   const [counter, setCounter] = useState(0);
 
+  const memoryused = useLeakDetectionStore((state) => state.memoryInfo);
+
   useEffect(() => {
+    // Create memory leak by storing large objects without cleanup
     const largeObject = new Array(10000).fill("🐛").map((item, index) => ({
       id: index,
       value: item,
@@ -17,24 +21,21 @@ const BaseLeakyComponent = () => {
 
     leakedData.push(largeObject);
 
-    // Log the memory being leaked
-    console.warn(
-      `LeakyComponent leaked ${((leakedData.length * 8 * 1000) / 1024).toFixed(
-        2
-      )}MB of memory`
-    );
+    // Not manually logging - letting native module detect the leak
+    return () => {
+      // Deliberately not cleaning up to cause the leak
+    };
   }, [counter]);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Memory Leak Demonstration</Text>
       <Text style={styles.info}>
-        Leaked Objects: {leakedData.length}
-        {"\n"}
-        Approximate Memory: {((leakedData.length * 8 * 1000) / 1024).toFixed(
-          2
-        )}{" "}
-        MB
+        Number of leaked objects: {leakedData.length}
+      </Text>
+      <Text style={styles.info}>memeory used: {memoryused?.usedMemory} MB</Text>
+      <Text style={styles.info}>
+        memeory available: {memoryused?.availableMemory} MB
       </Text>
       <Button
         title="Create Memory Leak"
@@ -44,13 +45,11 @@ const BaseLeakyComponent = () => {
   );
 };
 
-// Wrap the component with our leak detection HOC
-export const LeakyComponent = withLeakDetection(
+export const LeakScreen = withLeakDetection(
   BaseLeakyComponent,
   "LeakyComponent"
 );
 
-// Keep your existing styles...
 const styles = StyleSheet.create({
   container: {
     padding: 20,
