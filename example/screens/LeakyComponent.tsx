@@ -11,7 +11,6 @@ const BaseLeakyComponent = () => {
   const memoryused = useLeakDetectionStore((state) => state.memoryInfo);
 
   useEffect(() => {
-    // Create memory leak by storing large objects without cleanup
     const largeObject = new Array(10000).fill("🐛").map((item, index) => ({
       id: index,
       value: item,
@@ -20,11 +19,8 @@ const BaseLeakyComponent = () => {
     }));
 
     leakedData.push(largeObject);
-
-    // Not manually logging - letting native module detect the leak
-    return () => {
-      // Deliberately not cleaning up to cause the leak
-    };
+    console.log("Leaked data length:", leakedData.length);
+    console.log("Current memory usage:", memoryused?.usedMemory);
   }, [counter]);
 
   return (

@@ -4,30 +4,19 @@ import React, { useEffect } from "react";
 import { View, Text, Button, StyleSheet } from "react-native";
 
 // Create large objects that won't be cleaned up
-const leakedData: any[] = [];
+// const leakedData: any[] = [];
 
-const createLeakObject = () => {
-  return new Array(10000).fill("🐛").map((item, index) => ({
-    id: index,
-    value: item,
-    timestamp: Date.now(),
-    data: new Array(1000).fill(Math.random().toString()),
-  }));
-};
+// const createLeakObject = () => {
+//   return new Array(10000).fill("🐛").map((item, index) => ({
+//     id: index,
+//     value: item,
+//     timestamp: Date.now(),
+//     data: new Array(1000).fill(Math.random().toString()),
+//   }));
+// };
 
 export default function BaseSecondScreen() {
   const navigation = useNavigation();
-
-  useEffect(() => {
-    // Create memory leak by storing data without cleanup
-    const largeObject = createLeakObject();
-    leakedData.push(largeObject);
-
-    // Not logging manually - letting the native module detect the leak
-    return () => {
-      // Deliberately not cleaning up to cause the leak
-    };
-  }, []);
 
   return (
     <View style={styles.container}>

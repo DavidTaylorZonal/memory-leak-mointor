@@ -1,33 +1,25 @@
-import { useEffect, useRef, useState } from "react";
-import { useLeakDetectionStore } from "../hooks/useLeakDetectionStore";
+import { useEffect } from "react";
+
+import MemoryLeakMonitor from "../MemoryLeakMointorModule";
 
 export function withLeakDetection<P extends object>(
   WrappedComponent: React.ComponentType<P>,
   componentName: string
 ) {
   const WithLeakDetectionComponent: React.FC<P> = (props: P) => {
-    const { memoryInfo, trackComponent, getLeakStatus } =
-      useLeakDetectionStore();
-    const hasWarnedRef = useRef(false);
+    useEffect(() => {
+      // Start tracking this component
+      MemoryLeakMonitor.startComponentTracking(componentName).catch(
+        console.error
+      );
 
-    // // Track memory changes
-    // useEffect(() => {
-    //   if (memoryInfo?.usedMemory) {
-    //     console.log("We are rendering here");
-    //     trackComponent(componentName, memoryInfo.usedMemory);
-    //     const newStatus = getLeakStatus(componentName);
-
-    //     if (newStatus.isLeaking && !hasWarnedRef.current) {
-    //       hasWarnedRef.current = true;
-    //     }
-    //   }
-    // }, [memoryInfo?.usedMemory, componentName]);
-
-    // useEffect(() => {
-    //   return () => {
-    //     hasWarnedRef.current = false;
-    //   };
-    // }, []);
+      return () => {
+        // Stop tracking when component unmounts
+        MemoryLeakMonitor.stopComponentTracking(componentName).catch(
+          console.error
+        );
+      };
+    }, []);
 
     return <WrappedComponent {...props} />;
   };
