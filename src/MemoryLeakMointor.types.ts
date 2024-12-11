@@ -13,6 +13,31 @@ export type MemoryInfo = {
 // Memory readings for leak detection
 export type MemoryReadings = number[];
 
+// Session data type
+export type SessionData = {
+  sessionElapsed: number;
+  sessionRemaining: number;
+};
+
+// Component analysis in session report
+export type ComponentAnalysis = {
+  componentName: string;
+  totalIncrease: number;
+  averageIncrease: number;
+  initialMemory: number;
+  finalMemory: number;
+  peakMemory: number;
+  readingCount: number;
+};
+
+// Session report type
+export type SessionReport = {
+  sessionDuration: number;
+  componentsAnalyzed: number;
+  leakingComponents: ComponentAnalysis[];
+  timestamp: number;
+};
+
 // Event payload types
 export type MemoryUpdateEventPayload = {
   memoryInfo: MemoryInfo;
@@ -30,12 +55,17 @@ export type LeakDetectedEventPayload = {
   initialMemory: number;
   memoryReadings: MemoryReadings;
   timestamp: number;
+  isFirstReport: boolean;
+  sessionData?: SessionData;
 };
+
+export type SessionCompleteEventPayload = SessionReport;
 
 export interface MemoryLeakMonitorEvents {
   onMemoryUpdate: MemoryUpdateEventPayload;
   onChange: OnChangeEventPayload;
   onLeakDetected: LeakDetectedEventPayload;
+  onSessionComplete: SessionCompleteEventPayload;
 }
 
 export interface MemoryLeakMonitorModule {
@@ -53,6 +83,11 @@ export interface MemoryLeakMonitorModule {
   // Component tracking methods
   startComponentTracking(componentName: string): Promise<string>;
   stopComponentTracking(componentName: string): Promise<string>;
+  resetLeakTracking(): Promise<string>;
+
+  // Session management methods
+  startSession(durationMinutes: number): Promise<string>;
+  stopSession(): Promise<SessionReport>;
 
   // Event methods
   addListener<K extends keyof MemoryLeakMonitorEvents>(
