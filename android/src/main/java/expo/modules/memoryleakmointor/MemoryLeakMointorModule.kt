@@ -180,13 +180,6 @@ class MemoryLeakMointorModule : Module() {
             // Set memory snapshot in hierarchy
             hierarchyTracker.getNode(componentId)?.memorySnapshot = snapshot
             
-            println("""
-                LEAKMONITOR:📝 Component $componentName mounted:
-                LEAKMONITOR:  ID: $componentId
-                LEAKMONITOR:  Visit #${history.totalMounts}
-                LEAKMONITOR:  Initial Memory: $usedMemory MB
-            """.trimIndent())
-            
             componentId
         }
 
@@ -212,15 +205,6 @@ class MemoryLeakMointorModule : Module() {
                         memoryReadings = currentVisit.memoryReadings
                     )
                     history.visits[history.visits.lastIndex] = updatedVisit
-                    
-                    println("""
-                        LEAKMONITOR:📝 Component $componentName unmounted:
-                        LEAKMONITOR:  ID: $componentId
-                        LEAKMONITOR:  Visit duration: ${(updatedVisit.unmountTime!! - updatedVisit.mountTime) / 1000}s
-                        LEAKMONITOR:  Memory change: ${memoryChange}MB
-                        LEAKMONITOR:  Peak memory: ${updatedVisit.peakMemory}MB
-                        LEAKMONITOR:  Memory trend: ${updatedVisit.memoryReadings.joinToString(" -> ")}MB
-                    """.trimIndent())
                 }
             }
             
@@ -366,12 +350,6 @@ class MemoryLeakMointorModule : Module() {
             snapshot.peakMemory = maxOf(currentMemory, snapshot.peakMemory)
             snapshot.lastUpdateTime = now
 
-            println("""
-                LEAKMONITOR:📈 Memory update for $componentName:
-                LEAKMONITOR:  Current memory: $currentMemory MB
-                LEAKMONITOR:  Memory increase: $memoryIncrease MB
-            """.trimIndent())
-
             // Leak detection logic
             if (snapshot.readings.size >= 3 && !reportedLeaks.contains(componentName)) {
                 val totalIncrease = currentMemory - snapshot.readings.first()
@@ -381,14 +359,6 @@ class MemoryLeakMointorModule : Module() {
                     .all { (a, b) -> b >= (a - MIN_MEMORY_CHANGE) }
 
                 if (totalIncrease >= SIGNIFICANT_INCREASE_MB && increasingTrend) {
-                    println("""
-                        LEAKMONITOR:🚨 LEAK DETECTED in component: $componentName
-                        LEAKMONITOR:  Total increase: $totalIncrease MB
-                        LEAKMONITOR:  Initial memory: ${snapshot.readings.first()} MB
-                        LEAKMONITOR:  Current memory: $currentMemory MB
-                        LEAKMONITOR:  Memory trend: ${snapshot.readings.joinToString(" -> ")} MB
-                    """.trimIndent())
-                
                     reportedLeaks.add(componentName)
                     
                     mainHandler.post {
@@ -472,32 +442,8 @@ class MemoryLeakMointorModule : Module() {
         println("LEAKMONITOR:📊 Session Analysis Summary:")
         println("LEAKMONITOR:  Total components tracked: ${componentHistory.size}")
         
-        // Get hierarchy report
+        // Get hierarchy report - only want to print this once
         val hierarchyReport = hierarchyTracker.generateHierarchyReport()
-        
-        // Print the tree structure
-        println("\nLEAKMONITOR:📊 Component Hierarchy:")
-        fun printTree(node: Map<String, Any>, depth: Int = 0) {
-            val indent = "  ".repeat(depth)
-            val name = node["name"] as String
-            val memoryData = node["memoryData"] as? Map<String, Any>
-            val memoryInfo = memoryData?.let { mem ->
-                " (Base: ${mem["baseline"]}MB, Peak: ${mem["peak"]}MB, Final: ${mem["final"]}MB)"
-            } ?: ""
-            
-            println("LEAKMONITOR:  $indent├─ $name$memoryInfo")
-            
-            @Suppress("UNCHECKED_CAST")
-            (node["children"] as? List<Map<String, Any>>)?.forEach { child ->
-                printTree(child, depth + 1)
-            }
-        }
-        
-        // Print each root node
-        (hierarchyReport["tree"] as? List<Map<String, Any>>)?.forEach { root ->
-            printTree(root)
-    }
-    
         
         // Generate component analysis
         val componentAnalysis = componentHistory.map { (name, history) ->
@@ -519,14 +465,6 @@ class MemoryLeakMointorModule : Module() {
             val finalMemory = visits.lastOrNull()?.let { lastVisit ->
                 lastVisit.finalMemory ?: lastVisit.peakMemory
             } ?: 0
-            
-            println("""
-                LEAKMONITOR:  📱 $name:
-                LEAKMONITOR:    Total visits: ${history.totalMounts}
-                LEAKMONITOR:    Total memory change: ${totalMemoryChange}MB
-                LEAKMONITOR:    Initial memory: ${initialMemory}MB
-                LEAKMONITOR:    Final memory: ${finalMemory}MB
-            """.trimIndent())
             
             mapOf(
                 "componentName" to name,
@@ -560,6 +498,7 @@ class MemoryLeakMointorModule : Module() {
             "timestamp" to System.currentTimeMillis()
         )
     }
+
 
     companion object {
         private const val SIGNIFICANT_INCREASE_MB = 20
