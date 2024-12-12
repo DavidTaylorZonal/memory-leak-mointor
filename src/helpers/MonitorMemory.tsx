@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 
 import MemoryLeakMonitor from "../MemoryLeakMointorModule";
-import { useLeakDetectionStore } from "../hooks/useLeakDetectionStore";
 
 interface MonitorMemoryProps {
   children: React.ReactNode;
@@ -28,14 +27,6 @@ export const MonitorMemory: React.FC<MonitorMemoryProps> = ({
           `MONITOR: Started ${sessionDurationMinutes} minute session`
         );
 
-        // Set up memory update listener
-        const memorySubscription = MemoryLeakMonitor.addListener(
-          "onMemoryUpdate",
-          (event) => {
-            useLeakDetectionStore.setState({ memoryInfo: event.memoryInfo });
-          }
-        );
-
         // Force stop session after duration
         const timeoutMs = sessionDurationMinutes * 60 * 1000;
         timeoutId = window.setTimeout(async () => {
@@ -49,7 +40,6 @@ export const MonitorMemory: React.FC<MonitorMemoryProps> = ({
 
         return () => {
           console.log("MONITOR: Cleaning up monitoring");
-          memorySubscription.remove();
           window.clearTimeout(timeoutId);
 
           // Clean up in sequence
