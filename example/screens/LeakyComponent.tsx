@@ -1,3 +1,4 @@
+import { useNavigation } from "@react-navigation/native";
 import { withLeakDetection } from "memory-leak-mointor";
 import React, { useEffect, useState } from "react";
 import { View, Text, Button, StyleSheet } from "react-native";
@@ -7,6 +8,7 @@ const leakedData: any[] = [];
 
 const BaseLeakyComponent = () => {
   const [counter, setCounter] = useState(0);
+  const navigation = useNavigation();
 
   useEffect(() => {
     const largeObject = new Array(10000).fill("🐛").map((item, index) => ({
@@ -30,6 +32,7 @@ const BaseLeakyComponent = () => {
         title="Create Memory Leak"
         onPress={() => setCounter((prev) => prev + 1)}
       />
+      <Button title="Go to home" onPress={() => navigation.navigate("Home")} />
     </View>
   );
 };

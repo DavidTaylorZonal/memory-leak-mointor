@@ -1,13 +1,11 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { MonitorMemory } from "memory-leak-mointor";
-import React, { useEffect } from "react";
+import React from "react";
 
-// import HomeScreen from "./screens/HomeScreen";
-// import SecondScreen from "./screens/SecondScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LeakScreen } from "./screens/LeakyComponent";
-import SecondScreen from "./screens/SecondScreen";
+import { SecondScreen } from "./screens/SecondScreen";
 
 const Stack = createNativeStackNavigator();
 

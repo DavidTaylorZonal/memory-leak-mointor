@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import { withLeakDetection } from "memory-leak-mointor";
-import React, { useEffect } from "react";
+import React from "react";
 import { View, Text, Button, StyleSheet } from "react-native";
 
 // Create large objects that won't be cleaned up
@@ -15,7 +15,7 @@ import { View, Text, Button, StyleSheet } from "react-native";
 //   }));
 // };
 
-export default function BaseSecondScreen() {
+const BaseSecondScreen = () => {
   const navigation = useNavigation();
 
   return (
@@ -31,13 +31,9 @@ export default function BaseSecondScreen() {
       />
     </View>
   );
-}
+};
 
-// The withLeakDetection HOC will use the native module to detect leaks
-export const SecondScreen = withLeakDetection(
-  BaseSecondScreen,
-  "BaseSecondScreen"
-);
+export const SecondScreen = withLeakDetection(BaseSecondScreen, "SecondScreen");
 
 const styles = StyleSheet.create({
   container: {

@@ -82,7 +82,7 @@ export interface MemoryLeakMonitorModule {
 
   // Component tracking methods
   startComponentTracking(componentName: string): Promise<string>;
-  stopComponentTracking(componentName: string): Promise<string>;
+  stopComponentTracking(componentId: string): Promise<string>;
   resetLeakTracking(): Promise<string>;
 
   // Session management methods
