@@ -1,4 +1,4 @@
-import { useLeakDetectionStore, withLeakDetection } from "memory-leak-mointor";
+import { withLeakDetection } from "memory-leak-mointor";
 import React, { useEffect, useState } from "react";
 import { View, Text, Button, StyleSheet } from "react-native";
 
@@ -7,8 +7,6 @@ const leakedData: any[] = [];
 
 const BaseLeakyComponent = () => {
   const [counter, setCounter] = useState(0);
-
-  const memoryused = useLeakDetectionStore((state) => state.memoryInfo);
 
   useEffect(() => {
     const largeObject = new Array(10000).fill("🐛").map((item, index) => ({
@@ -20,7 +18,6 @@ const BaseLeakyComponent = () => {
 
     leakedData.push(largeObject);
     console.log("Leaked data length:", leakedData.length);
-    console.log("Current memory usage:", memoryused?.usedMemory);
   }, [counter]);
 
   return (
@@ -28,10 +25,6 @@ const BaseLeakyComponent = () => {
       <Text style={styles.title}>Memory Leak Demonstration</Text>
       <Text style={styles.info}>
         Number of leaked objects: {leakedData.length}
-      </Text>
-      <Text style={styles.info}>memeory used: {memoryused?.usedMemory} MB</Text>
-      <Text style={styles.info}>
-        memeory available: {memoryused?.availableMemory} MB
       </Text>
       <Button
         title="Create Memory Leak"
