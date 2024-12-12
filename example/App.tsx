@@ -11,7 +11,7 @@ const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <MonitorMemory>
+    <MonitorMemory sessionDurationMinutes={2}>
       <NavigationContainer>
         <Stack.Navigator>
           <Stack.Screen

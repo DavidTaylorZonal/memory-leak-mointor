@@ -94,35 +94,24 @@ class ComponentHierarchyTracker(private val context: Context) {
         parentStack.remove(componentId)
     }
     
-    fun generateHierarchyReport(): Map<String, Any> {
-        // First, get all components by name to track first occurrence
-        val componentFirstOccurrence = mutableMapOf<String, String>() // name -> first id
-        hierarchy.nodes.forEach { (id, node) ->
-            if (!componentFirstOccurrence.containsKey(node.name)) {
-                componentFirstOccurrence[node.name] = id
+       fun generateHierarchyReport(): Map<String, Any> {
+        // Build tree structure starting with first occurrence of root components
+        val rootComponents = hierarchy.rootIds
+            .filter { id -> 
+                val node = hierarchy.nodes[id]!!
+                !node.isRevisit && node.parentId == null
             }
-        }
-
-        // Build tree starting only from true root components
-        val rootComponents = hierarchy.rootIds.filter { id ->
-            val node = hierarchy.nodes[id]!!
-            val isFirstOccurrence = componentFirstOccurrence[node.name] == id
-            isFirstOccurrence && node.parentId == null
-        }
-
-        val treeStructure = rootComponents
             .sortedBy { hierarchy.nodes[it]?.mountTime ?: 0L }
-            .map { rootId -> buildTreeNode(rootId) }
 
-        val metrics = calculateHierarchyMetrics()
+        val treeStructure = rootComponents.map { buildTreeNode(it) }
         val leakingSuspects = findLeakingSuspects()
+        val metrics = calculateHierarchyMetrics()
         
         println("\nLEAKMONITOR:📊 Component Hierarchy:")
         fun printTree(node: Map<String, Any>, depth: Int = 0) {
             val indent = "  ".repeat(depth)
             val name = node["name"] as String
             val memoryData = node["memoryData"] as? Map<String, Any>
-            
             val memoryInfo = memoryData?.let { mem ->
                 " (Base: ${mem["baseline"]}MB, Peak: ${mem["peak"]}MB, Final: ${mem["final"]}MB)"
             } ?: ""
@@ -140,16 +129,21 @@ class ComponentHierarchyTracker(private val context: Context) {
             printTree(root)
         }
 
-        // Print any revisits separately
-        hierarchy.nodes.values
-            .filter { node -> componentFirstOccurrence[node.name] != node.id }
-            .sortedBy { it.mountTime }
-            .forEach { node ->
-                val memoryInfo = node.memorySnapshot?.let { mem ->
-                    " (Base: ${mem.baselineMemory}MB, Peak: ${mem.peakMemory}MB, Final: ${mem.previousMemory}MB)"
-                } ?: ""
-                println("LEAKMONITOR:  ├─ ${node.name}$memoryInfo (revisit)")
+        // Print memory leak summary
+        if (leakingSuspects.isNotEmpty()) {
+            println("\nLEAKMONITOR:🚨 Memory Leak Summary:")
+            leakingSuspects.forEach { suspect ->
+                val path = suspect["componentPath"] as List<String>
+                val increase = suspect["memoryIncrease"] as Int
+                val totalIncrease = suspect["totalIncrease"] as Int
+                val childrenIncrease = suspect["childrenIncrease"] as Int
+                println("""
+                    LEAKMONITOR:  Potential memory leak detected in: ${suspect["componentName"]}
+                    LEAKMONITOR:    Memory increase: ${increase}MB (Total: ${totalIncrease}MB, Children: ${childrenIncrease}MB)
+                    LEAKMONITOR:    Component path: ${path.joinToString(" → ")}
+                """.trimIndent())
             }
+        }
         
         return mapOf(
             "tree" to treeStructure,
@@ -161,33 +155,55 @@ class ComponentHierarchyTracker(private val context: Context) {
 
     private fun findLeakingSuspects(): List<Map<String, Any>> {
         val suspects = mutableListOf<Map<String, Any>>()
+        val processedComponents = mutableSetOf<String>()
         
-        fun checkNode(nodeId: String, path: List<String>) {
-            val node = hierarchy.nodes[nodeId] ?: return
+        // First, analyze leaf nodes (components with no children) first
+        fun analyzeNode(nodeId: String, path: List<String>): Int? {
+            val node = hierarchy.nodes[nodeId] ?: return null
             val currentPath = path + node.name
             
-            node.memorySnapshot?.let { snapshot ->
-                val memoryChange = snapshot.previousMemory - snapshot.baselineMemory
-                if (memoryChange > SIGNIFICANT_INCREASE_MB) {
-                    suspects.add(mapOf(
-                        "componentId" to node.id,
-                        "componentName" to node.name,
-                        "memoryIncrease" to memoryChange,
-                        "componentPath" to currentPath
-                    ))
-                }
-            }
-            
+            // Get memory changes from children first
+            var childrenMaxIncrease = 0
             node.children.forEach { childId ->
-                checkNode(childId, currentPath)
+                val childIncrease = analyzeNode(childId, currentPath) ?: 0
+                childrenMaxIncrease = maxOf(childrenMaxIncrease, childIncrease)
             }
+
+            // Calculate this node's memory increase
+            val nodeIncrease = node.memorySnapshot?.let { snapshot ->
+                snapshot.previousMemory - snapshot.baselineMemory
+            } ?: 0
+
+            // Only consider this node leaking if its increase is significantly more than its children
+            val realIncrease = nodeIncrease - childrenMaxIncrease
+            if (realIncrease > SIGNIFICANT_INCREASE_MB && !processedComponents.contains(node.name)) {
+                suspects.add(mapOf(
+                    "componentId" to node.id,
+                    "componentName" to node.name,
+                    "memoryIncrease" to realIncrease,
+                    "totalIncrease" to nodeIncrease,
+                    "childrenIncrease" to childrenMaxIncrease,
+                    "componentPath" to currentPath,
+                    "baseline" to (node.memorySnapshot?.baselineMemory ?: 0),
+                    "peak" to (node.memorySnapshot?.peakMemory ?: 0),
+                    "final" to (node.memorySnapshot?.previousMemory ?: 0)
+                ))
+                processedComponents.add(node.name)
+            }
+
+            return nodeIncrease
         }
         
-        hierarchy.rootIds.forEach { rootId ->
-            checkNode(rootId, emptyList())
-        }
+        // Start analysis from root nodes
+        hierarchy.rootIds
+            .filter { !hierarchy.nodes[it]!!.isRevisit }
+            .forEach { rootId ->
+                analyzeNode(rootId, emptyList())
+            }
         
-        return suspects.sortedByDescending { it["memoryIncrease"] as Int }
+        return suspects
+            .sortedByDescending { it["memoryIncrease"] as Int }
+            .filter { it["memoryIncrease"] as Int > SIGNIFICANT_INCREASE_MB }
     }
     
     private fun calculateHierarchyMetrics(): Map<String, Any> {
